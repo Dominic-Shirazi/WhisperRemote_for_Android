@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">WhisperRemote</string>
+    <string name="accessibility_service_label">WhisperRemote Dictation</string>
+    <string name="settings_title">WhisperRemote Settings</string>
+    <string name="api_url_label">API URL:</string>
+    <string name="save_settings">Save Settings</string>
+    <string name="accessibility_reminder">Important: Please enable the WhisperRemote Accessibility Service in your device settings for dictation to work.</string>
+</resources>

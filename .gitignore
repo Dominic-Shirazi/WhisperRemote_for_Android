@@ -1,0 +1,59 @@
+# Built application files
+*.apk
+*.aar
+*.aab
+*.ap_
+
+# Dalvik VM files
+*.dex
+
+# Java class files
+*.class
+
+# Generated / build output
+build/
+bin/
+gen/
+out/
+release/
+
+# Gradle
+.gradle/
+gradle.properties.local
+
+# Local configuration (SDK path, machine-specific settings)
+local.properties
+
+# IntelliJ / Android Studio
+*.iml
+.idea/workspace.xml
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+.idea/deploymentTargetSelector.xml
+.idea/deviceManager.xml
+.idea/appInsightsSettings.xml
+
+# Signing keys — NEVER commit these
+*.jks
+*.keystore
+!debug.keystore
+
+# Captures / profiling
+captures/
+
+# External native build
+.externalNativeBuild/
+.cxx/
+
+# Kotlin scratch
+.kotlin/
+
+# Temp files
+.temp/
+
+# OS
+.DS_Store
+Thumbs.db
