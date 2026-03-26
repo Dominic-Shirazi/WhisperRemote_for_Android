@@ -8,7 +8,6 @@ import android.os.Bundle
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import java.lang.ref.WeakReference
 
 class DictationAccessibilityService : AccessibilityService() {
 
@@ -22,6 +21,7 @@ class DictationAccessibilityService : AccessibilityService() {
     }
 
     private var focusedNode: AccessibilityNodeInfo? = null
+    private var hasFocusedEditable = false
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -30,15 +30,35 @@ class DictationAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
-        // Log all focus-related events to debug tracking
-        if (event.eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED || 
-            event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED) {
-            
-            val source = event.source
-            if (source != null && source.isEditable) {
-                // Important: node objects are reused, must make a copy or refresh
-                focusedNode = AccessibilityNodeInfo.obtain(source)
-                Log.d("DictationService", "Tracked new focused node: ${source.className}")
+        when (event.eventType) {
+            AccessibilityEvent.TYPE_VIEW_FOCUSED -> {
+                val source = event.source
+                if (source != null && source.isEditable) {
+                    focusedNode = AccessibilityNodeInfo.obtain(source)
+                    if (!hasFocusedEditable) {
+                        hasFocusedEditable = true
+                        FloatingButtonService.getInstance()?.onTextFieldFocused()
+                        Log.d("DictationService", "Editable field focused: ${source.className}")
+                    }
+                } else {
+                    if (hasFocusedEditable) {
+                        hasFocusedEditable = false
+                        FloatingButtonService.getInstance()?.onTextFieldFocusLost()
+                        Log.d("DictationService", "Focus left editable field")
+                    }
+                }
+            }
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
+                // Fires on significant navigation: home screen, app switch, new activity.
+                // Ask Android directly whether an editable field is still active.
+                if (hasFocusedEditable) {
+                    val activeFocus = findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+                    if (activeFocus == null || !activeFocus.isEditable) {
+                        hasFocusedEditable = false
+                        FloatingButtonService.getInstance()?.onTextFieldFocusLost()
+                        Log.d("DictationService", "Window changed, no editable focus — hiding button")
+                    }
+                }
             }
         }
     }
@@ -47,7 +67,7 @@ class DictationAccessibilityService : AccessibilityService() {
 
     fun pasteText(text: String) {
         Log.d("DictationService", "pasteText called with: $text")
-        
+
         // 1. Always copy to clipboard as a reliable backup
         try {
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -75,16 +95,19 @@ class DictationAccessibilityService : AccessibilityService() {
                 if (!pasteSuccess) {
                     // Fallback to SET_TEXT (replaces entire field content)
                     val arguments = Bundle()
-                    arguments.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
+                    arguments.putCharSequence(
+                        AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text
+                    )
                     val setSuccess = node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)
                     Log.d("DictationService", "ACTION_SET_TEXT result: $setSuccess")
                 }
             } else {
                 Log.e("DictationService", "Node is not editable")
             }
-            // Always release the node to prevent memory leaks
-            // node.recycle() - Note: in modern Android, recycle() is often handled automatically or unnecessary
         } ?: Log.e("DictationService", "No target node found for pasting")
+
+        // Notify FloatingButtonService that paste is done
+        FloatingButtonService.getInstance()?.onPasteComplete(hasFocusedEditable)
     }
 
     override fun onUnbind(intent: android.content.Intent?): Boolean {
